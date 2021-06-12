@@ -6,10 +6,17 @@ Implemented by Michael Meckl.
 """
 
 import sys
+import os
 from argparse import ArgumentParser
 from DIPPID import SensorUDP
 from PyQt5 import QtWidgets, QtCore, uic, QtGui
 from PyQt5.QtGui import QPainter
+from game_widget import GameWindow, Direction
+
+
+# CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+# ui_file = os.path.join(CURRENT_DIR, "dippid_game.ui")
+# form, base = uic.loadUiType(ui_file)
 
 
 class DippidGame(QtWidgets.QWidget):
@@ -19,7 +26,10 @@ class DippidGame(QtWidgets.QWidget):
     def __init__(self, port=5700):
         super(DippidGame, self).__init__()
         self.game_started = False
+        # self.setupUi(self)
         self.sensor = SensorUDP(port)
+
+        # self.game = GameWindow()
 
         self.ui = uic.loadUi("dippid_game.ui", self)
         self._show_introduction()
@@ -30,28 +40,34 @@ class DippidGame(QtWidgets.QWidget):
         # TODO would be better to check this in an infinite loop in the background? or at least until connected! maybe don't even allow start game?
         self._check_connected_status()
 
-        # the callbacks need to be registered AFTER checking connected status, otherwise we can't be sure about the
-        # connected status as they register themselves as capabilities as well
-        # TODO only register them AFTER starting the game?
-        self._register_sensor_callbacks()
-
         self.ui.btn_start_game.setFocusPolicy(QtCore.Qt.NoFocus)  # prevent auto-focus of the start button
         self.ui.btn_start_game.clicked.connect(self._show_game)
 
     def _register_sensor_callbacks(self):
         self.sensor.register_callback('button_1', self._handle_button_press)  # TODO can button be useful as well?
-        self.sensor.register_callback('accelerometer', self._handle_movement)
-        self.sensor.register_callback('gravity', self._handle_position_change)
+        # self.sensor.register_callback('accelerometer', self._handle_movement)
+        self.sensor.register_callback('gravity', self._handle_movement)
+        self.sensor.register_callback('gyroscope', self._handle_position_change)
 
-    def _handle_movement(self, data):
+    # TODO
+    def _handle_acceleration(self, data):
         # the mobile device was accelerated in some direction!
-        print("the mobile device was accelerated in some direction!")
-        print(data)  #TODO
+        if data["x"] < -0.60:
+            # self.last_accel = data["x"]
+            self.ui.game_widget.move_character_forward()
+
+    # TODO doch while schleife probieren?
+    def _handle_movement(self, data):
+        # the mobile device is tilted in a specific direction!
+        if data["x"] < -6.0:
+            self.ui.game_widget.move_character_forward()
 
     def _handle_position_change(self, data):
         # the mobile device changed it's position!
-        print("the mobile device changed it's position!")
-        print(data)  #TODO
+        if data["x"] > 1.5:
+            self.ui.game_widget.switch_lane(direction=Direction.UP)
+        elif data["x"] < -1.5:
+            self.ui.game_widget.switch_lane(direction=Direction.DOWN)
 
     def _handle_button_press(self, data):
         try:
@@ -79,20 +95,24 @@ class DippidGame(QtWidgets.QWidget):
         index = self.ui.stackedWidget.currentIndex() + 1
         # switch widget index to the element in the stack at the given index (i.e. move to this page)
         self.ui.stackedWidget.setCurrentIndex(index)
-        # current_widget = self.ui.stackedWidget.currentWidget()
-
-        # TODO press a start button / key or immediately start game when moving device?
         self._start_game()
 
     def _start_game(self):
         self.game_started = True
+        self.ui.game_widget.start()
+
+        # the callbacks need to be registered AFTER checking connected status, otherwise we can't be sure about the
+        # connected status as they register themselves as capabilities as well
+        self._register_sensor_callbacks()
 
         print('capabilities: ', self.sensor.get_capabilities())
-        if self.sensor.has_capability("accelerometer"):
-            print("accelerometer x-val:", self.sensor.get_value("accelerometer")['x'])
+        # if self.sensor.has_capability("accelerometer"):
+        #    print("accelerometer x-val:", self.sensor.get_value("accelerometer")['x'])
 
-    def onPaintEvent(self, painter: QPainter):
+    def keyPressEvent(self, key: QtGui.QKeyEvent):
         pass
+        # if
+        #    self.game_started = False
 
     # def closeEvent(self, event: QtGui.QCloseEvent):
     #     self.sensor.disconnect()  # stop sensor before closing!
