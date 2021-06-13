@@ -241,7 +241,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Controls: &lt;/span&gt;Use your mobile phone to move the character and reach the end while avoiding all obstacles!&lt;/p&gt;&lt;p&gt;You can move your character by tilting your phone to the right. Swinging your phone up or down will cause&lt;/p&gt;&lt;p&gt;your character to switch lanes.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Controls: &lt;/span&gt;Use your mobile phone to move the character and reach the end while avoiding all obstacles!&lt;/p&gt;&lt;p&gt;You can move your character by tilting your phone to the right. Rapidly moving your phone up or down&lt;/p&gt;&lt;p&gt;will cause your character to switch lanes.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
       <widget class="GameWindow" name="game_widget">

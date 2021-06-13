@@ -10,7 +10,8 @@ import os
 from argparse import ArgumentParser
 import DIPPID
 from PyQt5 import QtWidgets, QtCore, uic
-from game_widget import Direction
+from game_widget import Direction, Velocity
+
 
 # CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 # ui_file = os.path.join(CURRENT_DIR, "dippid_game.ui")
@@ -88,20 +89,17 @@ class DippidGame(QtWidgets.QWidget):
 
     def _register_sensor_callbacks(self):
         # self.sensor.register_callback('button_1', self._handle_button_press)
-        # self.sensor.register_callback('accelerometer', self._handle_movement)
+        # self.sensor.register_callback('accelerometer', self._handle_acceleration)
         self.sensor.register_callback('gravity', self._handle_movement)
         self.sensor.register_callback('gyroscope', self._handle_position_change)
 
-    def _handle_acceleration(self, data):
-        # the mobile device was accelerated in some direction!
-        if data["x"] < -0.60:
-            # self.last_accel = data["x"]
-            self.ui.game_widget.move_character_forward()
-
+    # TODO use accelerometer x instead of gravity?
     def _handle_movement(self, data):
         # the mobile device is tilted in a specific direction!
-        if data["x"] < -6.0:
-            self.ui.game_widget.move_character_forward()
+        if data["x"] <= -9.5:
+            self.ui.game_widget.move_character_forward(velocity=Velocity.FAST)
+        elif data["x"] <= -6.0:
+            self.ui.game_widget.move_character_forward(velocity=Velocity.NORMAL)
 
     def _handle_position_change(self, data):
         # the mobile device changed it's position!
@@ -127,7 +125,7 @@ class DippidGame(QtWidgets.QWidget):
 def main():
     # parse command line input and print out some helpful information
     parser = ArgumentParser(description="A small game that can be played with mobile phone movement recognized via the"
-                                        "DIPPID protocol.")
+                                        " DIPPID protocol.")
     parser.add_argument("-p", "--port", help="The port on which the mobile device sends its data via DIPPID", type=int,
                         default=5700, required=False)
     args = parser.parse_args()

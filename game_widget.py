@@ -13,6 +13,7 @@ from enum import Enum
 
 
 Direction = Enum("Direction", "UP DOWN")
+Velocity = Enum("Velocity", "NORMAL FAST")
 
 
 # noinspection PyAttributeOutsideInit
@@ -75,7 +76,7 @@ class GameWindow(QtWidgets.QFrame):
                               (self.__width - 145, self.obstacle_bottom_row_y)],
                 "collectibles": [(self.__width - 390, self.collectible_top_row_y),
                                  (self.__width - 205, self.collectible_top_row_y),
-                                 (self.__width - 422, self.collectible_bottom_row_y),
+                                 (self.__width - 425, self.collectible_bottom_row_y),
                                  (self.__width - 75, self.collectible_bottom_row_y)]
             }
         }
@@ -110,9 +111,13 @@ class GameWindow(QtWidgets.QFrame):
         self.current_obstacles = level.get("obstacles")
         self.current_collectibles = level.get("collectibles")
 
-    def move_character_forward(self):
-        self.player_xPos += self.player_width / 2
-        self.repaint()
+    def move_character_forward(self, velocity: Velocity):
+        if velocity == Velocity.NORMAL:
+            self.player_xPos += self.player_width / 2
+        elif velocity == Velocity.FAST:
+            self.player_xPos += self.player_width
+
+        self.repaint()  # update is not enough, the repaint has to happen immediately!
 
         if self.player_xPos > self.__width:
             print("Level finished!")
@@ -147,11 +152,12 @@ class GameWindow(QtWidgets.QFrame):
         self.__check_obstacle_hit()
 
     def __check_obstacle_hit(self):
-        # TODO check bounding boxes for player and obstable, if hit remove points and notify callback
+        # TODO check bounding boxes for player and obstable, if hit remove points and notify callback;
+        #  also reset x-pos to start of level (5)
         pass
 
     def __check_collectible_hit(self):
-        # TODO check bounding boxes for player and collectible, if hit add points and notify callback;
+        # TODO check bounding boxes for player and collectible, if hit add 20 points and notify callback;
         #  also remove this collectible from the current_collectibles list
         pass
 
@@ -172,7 +178,6 @@ class GameWindow(QtWidgets.QFrame):
             print("Switching lane did not work! Player is already at this lane!")
 
         self.repaint()
-        # self.update()
 
     def paintEvent(self, event: QPaintEvent):
         painter = QPainter()
