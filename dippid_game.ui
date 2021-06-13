@@ -17,7 +17,7 @@
    <item>
     <widget class="QStackedWidget" name="stackedWidget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="Game_Intro">
       <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -90,7 +90,7 @@
        <item>
         <widget class="QLabel" name="game_introduction">
          <property name="text">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This game is quite similar to the Dinosaur Game you see in Google Chrome, when you have no Internet.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;HOWEVER, you won't play it with your keyboard. That would be too simple! Instead you will use your&lt;/p&gt;&lt;p&gt;mobile phone to play! Sounds interesting? Then don't hesitate and click on the button below to see &lt;/p&gt;&lt;p&gt;what awaits you!&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Note: &lt;/span&gt;You need to have the Dippid - App installed and running on your mobile phone so the game can&lt;/p&gt;&lt;p&gt;actually locate your phone position. This game will only work if your mobile phone sends data to the IP&lt;/p&gt;&lt;p&gt;address of this device on the correct port (per default: 5700). Check the status below to see if it works.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;In this simple game, all you have to do is moving your character along a road while collecting&lt;/p&gt;&lt;p&gt;coins and avoiding obstacles.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;HOWEVER, you won't play it with your keyboard. That would be too simple! Instead you will use your&lt;/p&gt;&lt;p&gt;mobile phone to play! Sounds interesting? Then don't hesitate and click on the button below to see &lt;/p&gt;&lt;p&gt;what awaits you!&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Note: &lt;/span&gt;You need to have the Dippid - App installed and running on your mobile phone so the game can&lt;/p&gt;&lt;p&gt;actually locate your phone position. This game will only work if your mobile phone sends data to the IP&lt;/p&gt;&lt;p&gt;address of this device on the correct port (per default: 5700). Check the status below to see if it works.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
        </item>
@@ -241,7 +241,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Controls: &lt;/span&gt;Use your mobile phone to move the character and reach the end while avoiding all obstacles!&lt;/p&gt;&lt;p&gt;You can move your character by tilting your phone to the right. Moving your phone up or down will cause&lt;/p&gt;&lt;p&gt; your character to switch lanes.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Controls: &lt;/span&gt;Use your mobile phone to move the character and reach the end while avoiding all obstacles!&lt;/p&gt;&lt;p&gt;You can move your character by tilting your phone to the right. Swinging your phone up or down will cause&lt;/p&gt;&lt;p&gt;your character to switch lanes.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
       <widget class="GameWindow" name="game_widget">
