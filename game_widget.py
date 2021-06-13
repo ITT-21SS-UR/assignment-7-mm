@@ -76,7 +76,7 @@ class GameWindow(QtWidgets.QFrame):
                               (self.__width - 145, self.obstacle_bottom_row_y)],
                 "collectibles": [(self.__width - 390, self.collectible_top_row_y),
                                  (self.__width - 205, self.collectible_top_row_y),
-                                 (self.__width - 425, self.collectible_bottom_row_y),
+                                 (self.__width - 430, self.collectible_bottom_row_y),
                                  (self.__width - 75, self.collectible_bottom_row_y)]
             }
         }
@@ -145,7 +145,8 @@ class GameWindow(QtWidgets.QFrame):
         self.player_xPos = self.player_start_xPos
 
     def __get_player_bounds(self):
-        return self.player_xPos, self.player_yPos, self.player_xPos + self.player_width, self.player_yPos + self.player_height
+        return self.player_xPos, self.player_yPos, self.player_xPos + self.player_width,\
+               self.player_yPos + self.player_height
 
     def _check_player_collision(self):
         self.__check_collectible_hit()

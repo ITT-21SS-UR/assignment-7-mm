@@ -102,6 +102,7 @@ class DippidGame(QtWidgets.QWidget):
             self.ui.game_widget.move_character_forward(velocity=Velocity.NORMAL)
 
     def _handle_position_change(self, data):
+        # TODO small timeout so the controls are a little bit better? or a comparison with the last value
         # the mobile device changed it's position!
         if data["x"] > 1.5:
             self.ui.game_widget.switch_lane(direction=Direction.UP)
