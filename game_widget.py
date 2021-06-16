@@ -21,11 +21,12 @@ class GameWindow(QtWidgets.QFrame):
 
     def __init__(self, *args, **kwargs):
         super(GameWindow, self).__init__(*args, **kwargs)
+        # set game window background color and border
         self.setStyleSheet("border: 1px solid black; background-color: rgb(227, 219, 155);")
-        # necessary to set fixed size as otherwise we can't know dimensions before the first draw!
+        # necessary to set fixed size as otherwise we can't know the window dimensions before the first draw!
         self.setFixedSize(700, 350)
 
-        # print("At start:", self.width(), self.height())
+        # calculate static positions and values
         self.__width, self.__height = self.width(), self.height()
         self.inset = 120
         self.road_height = 70
@@ -54,6 +55,7 @@ class GameWindow(QtWidgets.QFrame):
         self.collectible_top_row_y = int(self.inset + self.road_height / 2)
         self.collectible_bottom_row_y = int(self.collectible_top_row_y + self.road_height)
 
+        # this dict defines the x-/y-positions of all collectibles and obstacles for each level
         self.levels = {
             1: {
                 "obstacles": [(self.__width - 300, self.obstacle_top_row_y)],
@@ -103,6 +105,7 @@ class GameWindow(QtWidgets.QFrame):
         self._set_values_for_level(level_index=1)
 
     def _set_values_for_level(self, level_index: int):
+        # set the obstacles and collectibles for the level with the given index
         try:
             level = self.levels[level_index]
         except IndexError:
@@ -126,6 +129,24 @@ class GameWindow(QtWidgets.QFrame):
             # check if player collided with an obstacle or a collectible
             self._check_player_collision()
 
+    def switch_lane(self, direction: Direction):
+        if direction == Direction.UP and not self.at_top_lane:
+            # move to the top lane
+            self.at_top_lane = True
+            self.player_yPos = self.player_yPos_top_lane
+
+            self._check_player_collision()
+        elif direction == Direction.DOWN and self.at_top_lane:
+            # move to the bottom lane
+            self.at_top_lane = False
+            self.player_yPos = self.player_yPos_bottom_lane
+
+            self._check_player_collision()
+        else:
+            print("Switching lane did not work! Player is already at this lane!")
+
+        self.repaint()
+
     def _level_up(self):
         self.current_level += 1
         self.current_points += 100
@@ -144,41 +165,48 @@ class GameWindow(QtWidgets.QFrame):
         self._set_values_for_level(level_index=self.current_level)
         self.player_xPos = self.player_start_xPos
 
-    def __get_player_bounds(self):
-        return self.player_xPos, self.player_yPos, self.player_xPos + self.player_width,\
-               self.player_yPos + self.player_height
+    def __check_overlap(self, object_x, object_y, object_radius):
+        # calculate the interesting x and y position of the player and the other object
+        player_right_edge = self.player_xPos + self.player_width/2
+        player_left_edge = self.player_xPos - self.player_width/2
+        object_right = object_x + object_radius
+        object_left = object_x - object_radius
+        player_lane = "top" if self.at_top_lane else "bottom"
+        object_lane = "top" if object_y == self.collectible_top_row_y else "bottom"
+
+        # check if the the player left and right edges are between the leftmost and rightmost x-pos of the other object
+        # and if they are on the same lane
+        if player_right_edge > object_left and player_left_edge <= object_right and player_lane == object_lane:
+            return True
+        else:
+            return False
 
     def _check_player_collision(self):
         self.__check_collectible_hit()
         self.__check_obstacle_hit()
 
     def __check_obstacle_hit(self):
-        # TODO check bounding boxes for player and obstable, if hit remove points and notify callback;
-        #  also reset x-pos to start of level (5)
-        pass
+        for obstacle in self.current_obstacles:
+            if self.__check_overlap(obstacle[0], obstacle[1], self.obstacle_radius):
+                # if the player and this obstacle overlap, remove points and update ui via callback;
+                # also reset the x-pos of the player to the start of level
+                new_points = self.current_points - 50
+                self.current_points = new_points if new_points >= 0 else 0  # make sure we don't have negative points
+                self.__points_callback(self.current_points)
+
+                self.player_xPos = self.player_start_xPos
+                break  # if one hit occurred we don't need to check the rest anymore
 
     def __check_collectible_hit(self):
-        # TODO check bounding boxes for player and collectible, if hit add 20 points and notify callback;
-        #  also remove this collectible from the current_collectibles list
-        pass
+        for collectible in self.current_collectibles:
+            if self.__check_overlap(collectible[0], collectible[1], self.collectible_radius):
+                # if the player and this collectible overlap, add points and update ui via callback;
+                # also remove this collectible from the current collectibles so it won't be drawn on next paintEvent
+                self.current_points += 20
+                self.__points_callback(self.current_points)
 
-    def switch_lane(self, direction: Direction):
-        if direction == Direction.UP and not self.at_top_lane:
-            # move to the top lane
-            self.at_top_lane = True
-            self.player_yPos = self.player_yPos_top_lane
-
-            self._check_player_collision()
-        elif direction == Direction.DOWN and self.at_top_lane:
-            # move to the bottom lane
-            self.at_top_lane = False
-            self.player_yPos = self.player_yPos_bottom_lane
-
-            self._check_player_collision()
-        else:
-            print("Switching lane did not work! Player is already at this lane!")
-
-        self.repaint()
+                self.current_collectibles.remove(collectible)
+                break  # the player can only collect one at a time, so checking the others too would be useless
 
     def paintEvent(self, event: QPaintEvent):
         painter = QPainter()
