@@ -1,3 +1,7 @@
+"""
+The whole file was taken from https://github.com/PDA-UR/DIPPID-py.
+"""
+
 import sys
 import json
 from threading import Thread

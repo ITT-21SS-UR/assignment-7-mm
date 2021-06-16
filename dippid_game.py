@@ -6,13 +6,12 @@ Implemented by Michael Meckl.
 """
 
 import sys
-import os
 from argparse import ArgumentParser
 import DIPPID
 from PyQt5 import QtWidgets, QtCore, uic
 from game_widget import Direction, Velocity
 
-
+# import os
 # CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 # ui_file = os.path.join(CURRENT_DIR, "dippid_game.ui")
 # form, base = uic.loadUiType(ui_file)
@@ -77,10 +76,6 @@ class DippidGame(QtWidgets.QWidget):
         # the game even started)
         self._register_sensor_callbacks()
 
-        # print('capabilities: ', self.sensor.get_capabilities())
-        # if self.sensor.has_capability("accelerometer"):
-        #    print("accelerometer x-val:", self.sensor.get_value("accelerometer")['x'])
-
     def _update_level(self, level: int):
         self.ui.level.setText(str(level))
 
@@ -90,27 +85,26 @@ class DippidGame(QtWidgets.QWidget):
     def _register_sensor_callbacks(self):
         # self.sensor.register_callback('button_1', self._handle_button_press)
         # self.sensor.register_callback('accelerometer', self._handle_acceleration)
-        self.sensor.register_callback('gravity', self._handle_movement)
-        self.sensor.register_callback('gyroscope', self._handle_position_change)
+        self.sensor.register_callback('gravity', self._handle_position_change)
+        self.sensor.register_callback('gyroscope', self._handle_angle_acceleration)
 
-    # TODO use accelerometer x instead of gravity?
-    def _handle_movement(self, data):
-        # the mobile device is tilted in a specific direction!
-        if data["x"] <= -9.5:
-            self.ui.game_widget.move_character_forward(velocity=Velocity.FAST)
-        elif data["x"] <= -6.0:
-            self.ui.game_widget.move_character_forward(velocity=Velocity.NORMAL)
+    def _handle_angle_acceleration(self, data):
+        if data["x"] > 2.5:
+            # the mobile device was moved rapidly around the x-axis!
+            self.ui.game_widget.switch_lane(direction=Direction.UP)
+        elif data["x"] < -2.5:
+            self.ui.game_widget.switch_lane(direction=Direction.DOWN)
 
     def _handle_position_change(self, data):
-        # TODO small timeout so the controls are a little bit better? or a comparison with the last value
-        # the mobile device changed it's position!
-        if data["x"] > 1.5:
-            self.ui.game_widget.switch_lane(direction=Direction.UP)
-        elif data["x"] < -1.5:
-            self.ui.game_widget.switch_lane(direction=Direction.DOWN)
+        if data["x"] <= -9.0:
+            # the mobile device is tilted in x-direction!
+            self.ui.game_widget.move_character_forward(velocity=Velocity.FAST)
+        elif data["x"] <= -5.0:
+            self.ui.game_widget.move_character_forward(velocity=Velocity.NORMAL)
 
     def _handle_button_press(self, data):
         try:
+            # print("Button data: ", data)
             if int(data) == 0:
                 print('button released')
             else:
