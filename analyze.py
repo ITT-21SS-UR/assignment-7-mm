@@ -7,7 +7,6 @@ Implemented by Michael Meckl.
 
 import sys
 import numpy as np
-import math
 from argparse import ArgumentParser
 # import pyqtgraph.examples
 from pyqtgraph.flowchart import Flowchart, Node
@@ -28,7 +27,8 @@ class LogNode(Node):
             'accelX': {'io': 'in'},
             'accelY': {'io': 'in'},
             'accelZ': {'io': 'in'},
-            'rotation': {'io': 'in'}
+            'rotation_vector': {'io': 'in'},
+            'rotation_angle': {'io': 'in'}
         }
         Node.__init__(self, name, terminals=terminals)
 
@@ -37,7 +37,8 @@ class LogNode(Node):
               f"AccelerationX: {kwds['accelX'][0]}\n"
               f"AccelerationY: {kwds['accelY'][0]}\n"
               f"AccelerationZ: {kwds['accelZ'][0]}\n"
-              f"RotationVector: {kwds['rotation']}\n")
+              f"RotationAngle: {kwds['rotation_angle'][0]}°\n"
+              f"RotationVector: {kwds['rotation_vector']}\n")
 
 
 class NormalVectorNode(Node):
@@ -53,6 +54,7 @@ class NormalVectorNode(Node):
             'accel1': {'io': 'in'},
             'accel2': {'io': 'in'},
             'rotation_vector': {'io': 'out'},
+            'rotation_angle': {'io': 'out'},
         }
         Node.__init__(self, name, terminals=terminals)
 
@@ -60,22 +62,17 @@ class NormalVectorNode(Node):
         # kwds will have one keyword argument per input terminal.
         accel1 = kwds["accel1"][0]
         accel2 = kwds["accel2"][0]
-        # vector1 = np.array([accel1, 0, 0])
-        # vector2 = np.array([0, 0, accel2])
-        # normal_vector = np.cross(vector1, vector2)
-
         self.rotation_vector = np.array([(0, 0), (accel1, accel2)])
 
+        # formel based on this post:
+        # https://math.stackexchange.com/questions/74204/find-angle-between-two-points-respective-to-horizontal-axis
+        self.rotation = np.degrees(np.arctan2([accel2], [accel1]))
+
+        # this would work as well:
         # v_3 = accel1 / np.sqrt(accel1**2 + accel2**2)
         # math.degrees(math.acos(v_3))
 
-        # formel based on this post: https://math.stackexchange.com/questions/74204/find-angle-between-two-points-respective-to-horizontal-axis
-        self.rotation = np.degrees(np.arctan2([accel2], [accel1]))
-
-        return {'rotation': self.rotation_vector}
-
-    def get_rotation_in_degrees(self):
-        return self.rotation
+        return {'rotation_vector': self.rotation_vector, 'rotation_angle': self.rotation}
 
 
 # noinspection PyAttributeOutsideInit
@@ -89,7 +86,7 @@ class FlowChart:
         w = self.fc.widget()
         # self.layout.addWidget(fc.widget(), 0, 0, 2, 1)
         self.layout.addWidget(w, 0, 0, 2, 1)
-        
+
         self.create_plot_widgets()
         self.set_plot_widgets()
         self.create_nodes()
@@ -101,24 +98,24 @@ class FlowChart:
         self.layout.addWidget(self.pw1, 0, 1)
         self.pw1.setYRange(0, 1)
         self.pw1.setTitle("X-Acceleration")
-    
+
         self.pw2 = pg.PlotWidget()
         self.layout.addWidget(self.pw2, 1, 1)
         self.pw2.setYRange(0, 1)
         self.pw2.setTitle("Y-Acceleration")
-    
+
         self.pw3 = pg.PlotWidget()
         self.layout.addWidget(self.pw3, 2, 1)
         self.pw3.setYRange(0, 1)
         self.pw3.setTitle("Z-Acceleration")
-    
+
         # create a plot widget for the normalvector node
         self.pw4 = pg.PlotWidget()
         self.layout.addWidget(self.pw4, 0, 2, 3, -1)  # make the last plot fill the entire right column
         self.pw4.setXRange(-1, 1)
         self.pw4.setYRange(-1, 1)
         self.pw4.setTitle("Rotation")
-        
+
     def set_plot_widgets(self):
         self.pw1Node = self.fc.createNode('PlotWidget', pos=(300, -150))
         self.pw1Node.setPlot(self.pw1)
@@ -128,21 +125,21 @@ class FlowChart:
         self.pw3Node.setPlot(self.pw3)
         self.pw4Node = self.fc.createNode('PlotWidget', pos=(300, 200))
         self.pw4Node.setPlot(self.pw4)
-    
+
     def create_nodes(self):
         # create the dippid node and set the provided port automatically
         self.dippidNode = self.fc.createNode("DIPPID", pos=(0, 0))
         self.dippidNode.set_connection_port(self.port)
-        
+
         # create buffer nodes for each axis
         self.bufferNodeX = self.fc.createNode('Buffer', pos=(150, -150))
         self.bufferNodeY = self.fc.createNode('Buffer', pos=(150, 0))
         self.bufferNodeZ = self.fc.createNode('Buffer', pos=(150, 150))
-        
+
         # create the custom nodes
         self.normalVectorNode = self.fc.createNode("NormalVectorNode", pos=(150, 200))
         self.logNode = self.fc.createNode("LogNode", pos=(300, 50))
-    
+
     def connect_node_terminals(self):
         # connect the acceleration values with the buffer nodes and the buffers with the corresponding plot widgets
         self.fc.connectTerminals(self.dippidNode['accelX'], self.bufferNodeX['dataIn'])
@@ -151,17 +148,18 @@ class FlowChart:
         self.fc.connectTerminals(self.bufferNodeX['dataOut'], self.pw1Node['In'])
         self.fc.connectTerminals(self.bufferNodeY['dataOut'], self.pw2Node['In'])
         self.fc.connectTerminals(self.bufferNodeZ['dataOut'], self.pw3Node['In'])
-    
+
         # connect the normal vector node with two of the acceleration values and plot it
         self.fc.connectTerminals(self.dippidNode['accelX'], self.normalVectorNode['accel1'])
         self.fc.connectTerminals(self.dippidNode['accelZ'], self.normalVectorNode['accel2'])
-        self.fc.connectTerminals(self.normalVectorNode['rotation'], self.pw4Node['In'])
+        self.fc.connectTerminals(self.normalVectorNode['rotation_vector'], self.pw4Node['In'])
 
         # connect the log node with the acceleration buffer nodes and the normal vector node
         self.fc.connectTerminals(self.dippidNode['accelX'], self.logNode['accelX'])
         self.fc.connectTerminals(self.dippidNode['accelY'], self.logNode['accelY'])
         self.fc.connectTerminals(self.dippidNode['accelZ'], self.logNode['accelZ'])
-        self.fc.connectTerminals(self.normalVectorNode['rotation'], self.logNode['rotation'])
+        self.fc.connectTerminals(self.normalVectorNode['rotation_angle'], self.logNode['rotation_angle'])
+        self.fc.connectTerminals(self.normalVectorNode['rotation_vector'], self.logNode['rotation_vector'])
 
 
 def main():
