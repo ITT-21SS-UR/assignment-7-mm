@@ -2,6 +2,10 @@
 # coding: utf-8
 # -*- coding: utf-8 -*-
 
+"""
+The whole file was taken from https://github.com/PDA-UR/DIPPID-py. Slightly adjusted to set the port dynamically.
+"""
+
 from pyqtgraph.flowchart import Flowchart, Node
 from pyqtgraph.flowchart.library.common import CtrlNode
 import pyqtgraph.flowchart.library as fclib
@@ -96,6 +100,10 @@ class DIPPIDNode(Node):
         self.connect_button.clicked.connect(self.connect_device)
         self.layout.addWidget(self.connect_button)
         self.ui.setLayout(self.layout)
+
+    def set_connection_port(self, port):
+        self.addr = str(port)
+        self.text.setText(self.addr)
 
     def update_all_sensors(self):
         if self.dippid is None or not self.dippid.has_capability('accelerometer'):

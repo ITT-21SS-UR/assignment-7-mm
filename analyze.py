@@ -10,7 +10,6 @@ import numpy as np
 from argparse import ArgumentParser
 # import pyqtgraph.examples
 from pyqtgraph.flowchart import Flowchart, Node
-from pyqtgraph.flowchart.library.common import CtrlNode
 import pyqtgraph.flowchart.library as fclib
 from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph as pg
@@ -25,9 +24,10 @@ class LogNode(Node):
 
     def __init__(self, name):
         terminals = {
-            'dataIn': {'io': 'in'},
-            # TODO specify all input separately!
-            # 'accelX': {'io': 'in'},
+            'accelX': {'io': 'in'},
+            'accelY': {'io': 'in'},
+            'accelZ': {'io': 'in'},
+            'rotation': {'io': 'in'},
             'dataOut': {'io': 'out'},
         }
         Node.__init__(self, name, terminals=terminals)
@@ -35,7 +35,7 @@ class LogNode(Node):
     def process(self, **kwds):
         print(kwds["dataIn"])
         print(kwds["dataIn"][0])
-        return {'dataOut': kwds["dataIn"]}
+        # return {'dataOut': kwds["dataIn"]}
 
 
 class NormalVectorNode(Node):
@@ -66,6 +66,7 @@ class NormalVectorNode(Node):
         print(vector2)
         normal_vector = np.cross(vector1, vector2)
         print("Normal: ", np.array([0, normal_vector]))
+        # TODO why not working above??? cross product result of two 2d vectors is one number??
 
         # TODO calculate the rotation! (angle between vector and the respective axis)
 
@@ -73,8 +74,89 @@ class NormalVectorNode(Node):
         return {'rotation': np.array([-accel1, accel2])}
 
 
-fclib.registerNodeType(LogNode, [('Logging',)])
-fclib.registerNodeType(NormalVectorNode, [('NormalVector',)])
+# noinspection PyAttributeOutsideInit
+class FlowChart:
+    def __init__(self, layout, port=5700):
+        self.layout = layout
+        self.port = port
+
+        # Create an empty flowchart with a single input and output
+        self.fc = Flowchart(terminals={})
+        w = self.fc.widget()
+        # self.layout.addWidget(fc.widget(), 0, 0, 2, 1)
+        self.layout.addWidget(w, 0, 0, 2, 1)
+        
+        self.create_plot_widgets()
+        self.set_plot_widgets()
+        self.create_nodes()
+        self.connect_node_terminals()
+
+    def create_plot_widgets(self):
+        # create one plot widget for each axis below each other in the left column
+        self.pw1 = pg.PlotWidget()
+        self.layout.addWidget(self.pw1, 0, 1)
+        self.pw1.setYRange(0, 1)
+        self.pw1.setTitle("X-Acceleration")
+    
+        self.pw2 = pg.PlotWidget()
+        self.layout.addWidget(self.pw2, 1, 1)
+        self.pw2.setYRange(0, 1)
+        self.pw2.setTitle("Y-Acceleration")
+    
+        self.pw3 = pg.PlotWidget()
+        self.layout.addWidget(self.pw3, 2, 1)
+        self.pw3.setYRange(0, 1)
+        self.pw3.setTitle("Z-Acceleration")
+    
+        # create a plot widget for the normalvector node
+        self.pw4 = pg.PlotWidget()
+        self.layout.addWidget(self.pw4, 0, 2, 3, -1)  # make the last plot fill the entire right column
+        self.pw4.setYRange(-1, 1)
+        self.pw4.setTitle("Rotation")
+        
+    def set_plot_widgets(self):
+        self.pw1Node = self.fc.createNode('PlotWidget', pos=(300, -150))
+        self.pw1Node.setPlot(self.pw1)
+        self.pw2Node = self.fc.createNode('PlotWidget', pos=(300, -50))
+        self.pw2Node.setPlot(self.pw2)
+        self.pw3Node = self.fc.createNode('PlotWidget', pos=(300, 150))
+        self.pw3Node.setPlot(self.pw3)
+        self.pw4Node = self.fc.createNode('PlotWidget', pos=(300, 200))
+        self.pw4Node.setPlot(self.pw4)
+    
+    def create_nodes(self):
+        # create the dippid node and set the provided port automatically
+        self.dippidNode = self.fc.createNode("DIPPID", pos=(0, 0))
+        self.dippidNode.set_connection_port(self.port)
+        
+        # create buffer nodes for each axis
+        self.bufferNodeX = self.fc.createNode('Buffer', pos=(150, -150))
+        self.bufferNodeY = self.fc.createNode('Buffer', pos=(150, 0))
+        self.bufferNodeZ = self.fc.createNode('Buffer', pos=(150, 150))
+        
+        # create the custom nodes
+        self.normalVectorNode = self.fc.createNode("NormalVectorNode", pos=(150, 200))
+        self.logNode = self.fc.createNode("LogNode", pos=(300, 50))
+    
+    def connect_node_terminals(self):
+        # connect the acceleration values with the buffer nodes and the buffers with the corresponding plot widgets
+        self.fc.connectTerminals(self.dippidNode['accelX'], self.bufferNodeX['dataIn'])
+        self.fc.connectTerminals(self.dippidNode['accelY'], self.bufferNodeY['dataIn'])
+        self.fc.connectTerminals(self.dippidNode['accelZ'], self.bufferNodeZ['dataIn'])
+        self.fc.connectTerminals(self.bufferNodeX['dataOut'], self.pw1Node['In'])
+        self.fc.connectTerminals(self.bufferNodeY['dataOut'], self.pw2Node['In'])
+        self.fc.connectTerminals(self.bufferNodeZ['dataOut'], self.pw3Node['In'])
+    
+        # connect the normal vector node with two of the acceleration values and plot it
+        self.fc.connectTerminals(self.dippidNode['accelX'], self.normalVectorNode['accel1'])
+        self.fc.connectTerminals(self.dippidNode['accelZ'], self.normalVectorNode['accel2'])
+        self.fc.connectTerminals(self.normalVectorNode['rotation'], self.pw4Node['In'])
+
+        # connect the log node with the acceleration buffer nodes and the normal vector node
+        self.fc.connectTerminals(self.dippidNode['accelX'], self.logNode['accelX'])
+        self.fc.connectTerminals(self.dippidNode['accelY'], self.logNode['accelY'])
+        self.fc.connectTerminals(self.dippidNode['accelZ'], self.logNode['accelZ'])
+        self.fc.connectTerminals(self.normalVectorNode['rotation'], self.logNode['rotation'])
 
 
 def main():
@@ -83,10 +165,13 @@ def main():
     parser.add_argument("-p", "--port", help="The port on which the mobile device sends its data via DIPPID", type=int,
                         default=5700, required=False)
     args = parser.parse_args()
-    port = args.port  # TODO use the port for the dippid node! (maybe set it automatically?)
+    port = args.port
 
-    # pyqtgraph.examples.run()
+    # register the custom nodes
+    fclib.registerNodeType(LogNode, [('Logging',)])
+    fclib.registerNodeType(NormalVectorNode, [('NormalVector',)])
 
+    # create the gui
     app = QtGui.QApplication([])
     win = QtGui.QMainWindow()
     win.setWindowTitle('Assignment 7')
@@ -95,71 +180,8 @@ def main():
     layout = QtGui.QGridLayout()
     cw.setLayout(layout)
 
-    # Create an empty flowchart with a single input and output
-    fc = Flowchart(terminals={})
-    w = fc.widget()
-
-    # layout.addWidget(fc.widget(), 0, 0, 2, 1)
-    layout.addWidget(w, 0, 0, 2, 1)
-
-    pw1 = pg.PlotWidget()
-    layout.addWidget(pw1, 0, 1)
-    pw1.setYRange(0, 1)
-    pw1.setTitle("X-Acceleration")
-
-    pw2 = pg.PlotWidget()
-    layout.addWidget(pw2, 1, 1)
-    pw2.setYRange(0, 1)
-    pw2.setTitle("Y-Acceleration")
-
-    pw3 = pg.PlotWidget()
-    layout.addWidget(pw3, 2, 1)
-    pw3.setYRange(0, 1)
-    pw3.setTitle("Z-Acceleration")
-
-    pw4 = pg.PlotWidget()
-    layout.addWidget(pw4, 0, 2, 3, -1)  # make the last plot fill the entire right column
-    pw4.setYRange(-1, 1)
-    pw4.setTitle("Rotation")
-
-    pw1Node = fc.createNode('PlotWidget', pos=(0, -150))
-    pw1Node.setPlot(pw1)
-    pw2Node = fc.createNode('PlotWidget', pos=(150, -150))
-    pw2Node.setPlot(pw2)
-    pw3Node = fc.createNode('PlotWidget', pos=(0, 150))
-    pw3Node.setPlot(pw3)
-    pw4Node = fc.createNode('PlotWidget', pos=(150, 150))
-    pw4Node.setPlot(pw4)
-
-    """
-    plotList = {'Top Plot': pw1, 'Bottom Plot': pw2}
-    pw1Node.setPlotList(plotList)
-    pw2Node.setPlotList(plotList)
-    """
-
-    dippidNode = fc.createNode("DIPPID", pos=(0, 0))
-    bufferNodeX = fc.createNode('Buffer', pos=(150, -150))
-    bufferNodeY = fc.createNode('Buffer', pos=(150, 0))
-    bufferNodeZ = fc.createNode('Buffer', pos=(150, 150))
-    normalVectorNode = fc.createNode("NormalVectorNode", pos=(250, 0))
-
-    fc.connectTerminals(dippidNode['accelX'], bufferNodeX['dataIn'])
-    fc.connectTerminals(dippidNode['accelY'], bufferNodeY['dataIn'])
-    fc.connectTerminals(dippidNode['accelZ'], bufferNodeZ['dataIn'])
-    fc.connectTerminals(bufferNodeX['dataOut'], pw1Node['In'])
-    fc.connectTerminals(bufferNodeY['dataOut'], pw2Node['In'])
-    fc.connectTerminals(bufferNodeZ['dataOut'], pw3Node['In'])
-
-    # connect the normal vector node
-    fc.connectTerminals(dippidNode['accelX'], normalVectorNode['accel1'])
-    fc.connectTerminals(dippidNode['accelZ'], normalVectorNode['accel2'])
-    fc.connectTerminals(normalVectorNode['rotation'], pw4Node['In'])
-
-    # TODO create log node and connect it to the 3 buffer node outputs and the normalvector node output!
-
-    # debug nodes with:
-    # fc.setInput(nameOfInputTerminal=newValue)
-    # output = fc.output()
+    # create the flowchart
+    flowchart = FlowChart(layout, port)
 
     win.show()
     # if not running in interactive mode or using PySide instead of PyQt, start the app
