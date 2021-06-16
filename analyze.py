@@ -7,6 +7,7 @@ Implemented by Michael Meckl.
 
 import sys
 import numpy as np
+import math
 from argparse import ArgumentParser
 # import pyqtgraph.examples
 from pyqtgraph.flowchart import Flowchart, Node
@@ -27,15 +28,16 @@ class LogNode(Node):
             'accelX': {'io': 'in'},
             'accelY': {'io': 'in'},
             'accelZ': {'io': 'in'},
-            'rotation': {'io': 'in'},
-            'dataOut': {'io': 'out'},
+            'rotation': {'io': 'in'}
         }
         Node.__init__(self, name, terminals=terminals)
 
     def process(self, **kwds):
-        print(kwds["dataIn"])
-        print(kwds["dataIn"][0])
-        # return {'dataOut': kwds["dataIn"]}
+        print(f"Log:\n"
+              f"AccelerationX: {kwds['accelX'][0]}\n"
+              f"AccelerationY: {kwds['accelY'][0]}\n"
+              f"AccelerationZ: {kwds['accelZ'][0]}\n"
+              f"RotationVector: {kwds['rotation']}\n")
 
 
 class NormalVectorNode(Node):
@@ -50,7 +52,7 @@ class NormalVectorNode(Node):
         terminals = {
             'accel1': {'io': 'in'},
             'accel2': {'io': 'in'},
-            'rotation': {'io': 'out'},
+            'rotation_vector': {'io': 'out'},
         }
         Node.__init__(self, name, terminals=terminals)
 
@@ -58,20 +60,22 @@ class NormalVectorNode(Node):
         # kwds will have one keyword argument per input terminal.
         accel1 = kwds["accel1"][0]
         accel2 = kwds["accel2"][0]
-        vector1 = np.array([accel1, 0])
-        vector2 = np.array([0, accel2])
-        # vector1_alt = np.array([0, 0], [accel1, 0])
-        # vector2_alt = np.array([0, 0], [0, accel2])
-        print(vector1)
-        print(vector2)
-        normal_vector = np.cross(vector1, vector2)
-        print("Normal: ", np.array([0, normal_vector]))
-        # TODO why not working above??? cross product result of two 2d vectors is one number??
+        # vector1 = np.array([accel1, 0, 0])
+        # vector2 = np.array([0, 0, accel2])
+        # normal_vector = np.cross(vector1, vector2)
 
-        # TODO calculate the rotation! (angle between vector and the respective axis)
+        self.rotation_vector = np.array([(0, 0), (accel1, accel2)])
 
-        # return {'rotation': [(0, 0), normal_vector]}
-        return {'rotation': np.array([-accel1, accel2])}
+        # v_3 = accel1 / np.sqrt(accel1**2 + accel2**2)
+        # math.degrees(math.acos(v_3))
+
+        # formel based on this post: https://math.stackexchange.com/questions/74204/find-angle-between-two-points-respective-to-horizontal-axis
+        self.rotation = np.degrees(np.arctan2([accel2], [accel1]))
+
+        return {'rotation': self.rotation_vector}
+
+    def get_rotation_in_degrees(self):
+        return self.rotation
 
 
 # noinspection PyAttributeOutsideInit
@@ -111,6 +115,7 @@ class FlowChart:
         # create a plot widget for the normalvector node
         self.pw4 = pg.PlotWidget()
         self.layout.addWidget(self.pw4, 0, 2, 3, -1)  # make the last plot fill the entire right column
+        self.pw4.setXRange(-1, 1)
         self.pw4.setYRange(-1, 1)
         self.pw4.setTitle("Rotation")
         
